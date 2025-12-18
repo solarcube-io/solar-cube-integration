@@ -1,21 +1,21 @@
 {
   "domain": "solar_cube",
   "name": "Solar Cube HEMS",
-  "version": "0.1.0",
-  "documentation": "https://portal.solarcube.io/help",
-  "config_flow": true,
-  "integration_type": "hub",
-  "dependencies": [
-    "frontend"
-  ],
   "after_dependencies": [
     "lovelace"
   ],
+  "codeowners": ["@piraterr"],
+  "config_flow": true,
+  "dependencies": [
+    "frontend"
+  ],
+  "documentation": "https://portal.solarcube.io/help",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/solarcube-io/solar-cube-hacs-integration/issues",
   "requirements": [
     "influxdb-client==1.43.0",
     "pytz"
   ],
-  "codeowners": ["@piraterr"],
-  "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/solarcube-io/solar-cube-hacs-integration/issues"
+  "version": "0.1.0"
 }
