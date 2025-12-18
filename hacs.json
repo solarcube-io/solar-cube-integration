@@ -1,6 +1,5 @@
 {
   "name": "Solar Cube HEMS",
   "content_in_root": false,
-  "domains": ["solar_cube"],
   "homeassistant": "2025.12.3"
 }
