@@ -138,8 +138,8 @@ install_tag_archive() {
 
    installed="$(gunzip_if_needed "$out_guess")"
    base="$(basename "$installed")"
-   log "Installed: /local/community/$folder/$base"
-   printf '%s' "/local/community/$folder/$base"
+   log "Installed: /hacsfiles/$folder/$base"
+   printf '%s' "/hacsfiles/$folder/$base"
 }
 
 gh_default_branch() {
@@ -284,8 +284,8 @@ install_release() {
    installed="$(gunzip_if_needed "$installed")"
    base="$(basename "$installed")"
 
-   log "Installed: /local/community/$folder/$base"
-   printf '%s' "/local/community/$folder/$base"
+   log "Installed: /hacsfiles/$folder/$base"
+   printf '%s' "/hacsfiles/$folder/$base"
 }
 
 install_repo_archive() {
@@ -310,8 +310,8 @@ install_repo_archive() {
 
    installed="$(gunzip_if_needed "$out_guess")"
    base="$(basename "$installed")"
-   log "Installed: /local/community/$folder/$base"
-   printf '%s' "/local/community/$folder/$base"
+   log "Installed: /hacsfiles/$folder/$base"
+   printf '%s' "/hacsfiles/$folder/$base"
 }
 
 failures=0
