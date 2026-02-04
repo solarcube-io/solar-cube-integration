@@ -39,7 +39,10 @@ class SolarCubeApi:
 
     def __init__(self, url: str, token: str, org: str) -> None:
         self._client = influxdb_client.InfluxDBClient(
-            url=url, token=self._normalize_token(token), org=org
+            url=url,
+            token=self._normalize_token(token),
+            org=org,
+            connection_pool_maxsize=64,
         )
         self._query_api = self._client.query_api()
 
