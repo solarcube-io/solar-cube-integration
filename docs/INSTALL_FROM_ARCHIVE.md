@@ -12,12 +12,12 @@ On a machine with the repository checked out:
 ```
 
 ```
-Built dist/solar_cube-0.2.0.tar.gz
-  version : 0.2.0
-  commit  : 9d5c623
+Built dist/solar_cube-0.2.2.tar.gz
+  version : 0.2.2
+  commit  : ce377f3
   files   : 25
   size    : 660K
-  sha256  : 58e6925b24aebd0e077e9954d477afa8d4fba045fab72a8681e52050987f2776
+  sha256  : 61c70d7da7fa0c543bc3f038638e00cef5047b69bc031b5ab6d56d7abb492599
 ```
 
 The file list comes from `git ls-files`, so tests, previews, dev tooling and
@@ -31,16 +31,16 @@ directly into a Home Assistant configuration directory.
 ## Copy it to the device
 
 ```bash
-scp dist/solar_cube-0.2.0.tar.gz \
-    dist/solar_cube-0.2.0.tar.gz.sha256 \
+scp dist/solar_cube-0.2.2.tar.gz \
+    dist/solar_cube-0.2.2.tar.gz.sha256 \
     sc-admin@solarcube:/tmp/
 ```
 
 Verify the transfer before installing:
 
 ```bash
-ssh sc-admin@solarcube 'cd /tmp && sha256sum -c solar_cube-0.2.0.tar.gz.sha256'
-# solar_cube-0.2.0.tar.gz: OK
+ssh sc-admin@solarcube 'cd /tmp && sha256sum -c solar_cube-0.2.2.tar.gz.sha256'
+# solar_cube-0.2.2.tar.gz: OK
 ```
 
 ## Install
@@ -61,7 +61,7 @@ Then extract into it:
 
 ```bash
 CONFIG=/opt/homeassistant/config
-sudo tar -xzf /tmp/solar_cube-0.2.0.tar.gz -C "$CONFIG"
+sudo tar -xzf /tmp/solar_cube-0.2.2.tar.gz -C "$CONFIG"
 sudo ls -l "$CONFIG/custom_components/solar_cube/manifest.json"
 ```
 
@@ -70,18 +70,18 @@ sudo ls -l "$CONFIG/custom_components/solar_cube/manifest.json"
 No host path to write to, so copy through the container:
 
 ```bash
-docker cp /tmp/solar_cube-0.2.0.tar.gz homeassistant:/tmp/
-docker exec homeassistant tar -xzf /tmp/solar_cube-0.2.0.tar.gz -C /config
-docker exec homeassistant rm /tmp/solar_cube-0.2.0.tar.gz
+docker cp /tmp/solar_cube-0.2.2.tar.gz homeassistant:/tmp/
+docker exec homeassistant tar -xzf /tmp/solar_cube-0.2.2.tar.gz -C /config
+docker exec homeassistant rm /tmp/solar_cube-0.2.2.tar.gz
 ```
 
 Under Docker-in-Docker, run these inside the outer container first:
 
 ```bash
-docker cp /tmp/solar_cube-0.2.0.tar.gz docker-client:/tmp/
-docker exec docker-client docker cp /tmp/solar_cube-0.2.0.tar.gz homeassistant:/tmp/
+docker cp /tmp/solar_cube-0.2.2.tar.gz docker-client:/tmp/
+docker exec docker-client docker cp /tmp/solar_cube-0.2.2.tar.gz homeassistant:/tmp/
 docker exec docker-client docker exec homeassistant \
-  tar -xzf /tmp/solar_cube-0.2.0.tar.gz -C /config
+  tar -xzf /tmp/solar_cube-0.2.2.tar.gz -C /config
 ```
 
 ### C. Home Assistant OS / Supervised
@@ -89,7 +89,7 @@ docker exec docker-client docker exec homeassistant \
 Use the Samba or SSH add-on and extract into `/config`:
 
 ```bash
-tar -xzf /tmp/solar_cube-0.2.0.tar.gz -C /config
+tar -xzf /tmp/solar_cube-0.2.2.tar.gz -C /config
 ```
 
 ## Restart and add the integration
@@ -114,7 +114,7 @@ Then in the web UI:
 Extracting over the top is enough — the archive replaces every shipped file:
 
 ```bash
-sudo tar -xzf /tmp/solar_cube-0.2.1.tar.gz -C "$CONFIG"
+sudo tar -xzf /tmp/solar_cube-0.2.2.tar.gz -C "$CONFIG"
 docker restart homeassistant
 ```
 
@@ -124,7 +124,7 @@ upgrade delete the directory first — this discards nothing you configured:
 
 ```bash
 sudo rm -rf "$CONFIG/custom_components/solar_cube"
-sudo tar -xzf /tmp/solar_cube-0.2.1.tar.gz -C "$CONFIG"
+sudo tar -xzf /tmp/solar_cube-0.2.2.tar.gz -C "$CONFIG"
 ```
 
 ## Getting updated dashboards after an upgrade
