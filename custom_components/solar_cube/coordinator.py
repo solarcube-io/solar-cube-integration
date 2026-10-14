@@ -93,6 +93,13 @@ class SolarCubeDataCoordinator(_SolarCubeCoordinator):
             return self.entry_data[CONF_AGENTS_BUCKET]
         return self.entry_data[CONF_DATA_BUCKET]
 
+    def _group_for(self, definition: dict[str, Any]) -> _QueryGroup:
+        return (
+            self._bucket_for(definition),
+            definition["measurement"],
+            definition.get("range_start", "-5m"),
+        )
+
     def _query_groups(self) -> dict[_QueryGroup, dict[str, str]]:
         """Group sensor definitions into one batch per bucket/measurement/range.
 
@@ -101,29 +108,48 @@ class SolarCubeDataCoordinator(_SolarCubeCoordinator):
 
         groups: dict[_QueryGroup, dict[str, str]] = defaultdict(dict)
         for definition in self.sensor_definitions:
-            group = (
-                self._bucket_for(definition),
-                definition["measurement"],
-                definition.get("range_start", "-5m"),
-            )
+            group = self._group_for(definition)
             groups[group][definition["field"]] = definition["key"]
+        return groups
+
+    def _fallback_groups(self) -> dict[_QueryGroup, dict[str, str]]:
+        """Return group -> {sensor key: fallback influx field}.
+
+        Kept apart from ``_query_groups`` so that a fallback field which is also
+        another definition's primary field can never take over that
+        definition's entry in the field -> key mapping.
+        """
+
+        groups: dict[_QueryGroup, dict[str, str]] = defaultdict(dict)
+        for definition in self.sensor_definitions:
+            if fallback := definition.get("fallback_field"):
+                groups[self._group_for(definition)][definition["key"]] = fallback
         return groups
 
     async def _async_fetch(self) -> dict[str, Any]:
         groups = self._query_groups()
+        fallback_groups = self._fallback_groups()
 
         async def _fetch_group(
             group: _QueryGroup, fields: dict[str, str]
         ) -> dict[str, Any]:
             bucket, measurement, range_start = group
+            fallbacks = fallback_groups.get(group, {})
             raw = await self.api.async_query_last_batch(
                 bucket=bucket,
                 measurement=measurement,
-                fields=list(fields),
+                # Fallback fields ride along in the same query; dict.fromkeys
+                # drops one that is also some definition's primary field.
+                fields=list(dict.fromkeys([*fields, *fallbacks.values()])),
                 range_start=range_start,
             )
             # Fields with no point in the window are reported as None.
-            return {key: raw.get(field) for field, key in fields.items()}
+            values = {key: raw.get(field) for field, key in fields.items()}
+            # Decided on every poll: only a missing point falls back, a 0 stays.
+            for key, fallback in fallbacks.items():
+                if values.get(key) is None:
+                    values[key] = raw.get(fallback)
+            return values
 
         results = await asyncio.gather(
             *(_fetch_group(group, fields) for group, fields in groups.items())

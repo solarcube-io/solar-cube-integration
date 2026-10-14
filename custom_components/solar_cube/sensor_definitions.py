@@ -6,6 +6,10 @@ Each definition describes one scalar value read from InfluxDB:
 ``name``         display name (suffixed to the device name by the entity)
 ``measurement``  InfluxDB measurement
 ``field``        InfluxDB field
+``fallback_field``
+                 optional InfluxDB field, fetched in the same query, whose value
+                 is used when ``field`` has no point in the lookup window. Only
+                 a missing point falls back; a real 0 from ``field`` is kept.
 ``source``       ``"agents"`` for the forecasts/actions bucket, omitted for the
                  live-data bucket. The concrete bucket names are user
                  configurable, so they are resolved by the coordinator and must
@@ -39,10 +43,16 @@ SENSOR_DEFINITIONS: list[dict[str, Any]] = [
         "state_class": "measurement",
     },
     {
+        # The battery's own power, positive while discharging. EssActivePower is
+        # the inverter's AC output, which on hybrid inverters also carries the DC
+        # PV already counted in ProductionActivePower. Older GoodWe ET images
+        # never write EssDischargePower, hence the fallback. The key keeps its
+        # name so the entity_id the dashboards use does not change.
         "key": "ess_active_power",
         "name": "ESS Active Power",
         "measurement": "data",
-        "field": "_sum/EssActivePower",
+        "field": "_sum/EssDischargePower",
+        "fallback_field": "_sum/EssActivePower",
         "unit": "W",
         "device_class": "power",
         "state_class": "measurement",
