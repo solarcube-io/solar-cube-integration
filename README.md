@@ -65,7 +65,7 @@ Solar Cube ships as an appliance: its users have no filesystem access and no way
   | zeronounours/lovelace-energy-entity-row | v1.2.0 |
   | RomRider/apexcharts-card | v2.2.3 |
 
-- **Cache-busting:** the installer appends `?v=<manifest version>` (fallback: a timestamp) to each resource URL, e.g. `/local/solar_cube/apexcharts-card/apexcharts-card.js?v=0.2.2`.
+- **Cache-busting:** the installer appends `?v=<manifest version>` (fallback: a timestamp) to each resource URL, e.g. `/local/solar_cube/apexcharts-card/apexcharts-card.js?v=0.2.3`.
 - **Managing them yourself instead:** untick the option and add the cards through HACS → Frontend, or manually under Settings → Dashboards → Resources. Hard-refresh the browser afterwards.
 
 ---
