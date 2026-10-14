@@ -41,6 +41,35 @@ def auto_enable_custom_integrations(enable_custom_integrations: Any) -> None:
     return
 
 
+@pytest.fixture(autouse=True)
+def no_frontend_installer(request: pytest.FixtureRequest):
+    """Stop the frontend installer from ever really running under test.
+
+    It shells out to install_frontend_deps.sh, which downloads third-party
+    JavaScript from GitHub into /config/www. The option defaults to True (Solar
+    Cube ships as an appliance), so any fixture that sets up an entry without
+    disabling it runs the script for real: pytest_socket cannot see it, because
+    the traffic belongs to a subprocess rather than to this interpreter, and the
+    spawned process leaves an asyncio waitpid thread that Home Assistant's
+    cleanup check then reports at teardown.
+
+    Tests that want to exercise the wiring ask for it with
+    ``@pytest.mark.allow_frontend_installer`` and patch it themselves.
+    """
+    if request.node.get_closest_marker("allow_frontend_installer"):
+        yield None
+        return
+
+    from unittest.mock import AsyncMock, patch
+
+    with patch(
+        "custom_components.solar_cube._async_run_frontend_installer",
+        new_callable=AsyncMock,
+        return_value=(0, "", ""),
+    ) as mocked:
+        yield mocked
+
+
 @pytest.fixture
 def utc_timezone():
     """Pin Home Assistant's local timezone to UTC.
