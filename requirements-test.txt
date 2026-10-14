@@ -4,7 +4,10 @@
 # whatever is newest. Raise both together.
 pytest-homeassistant-custom-component==0.13.308
 
-# Runtime dependency of the integration.
+# Runtime dependency of the integration. The manifest asks for a minimum
+# (influxdb-client>=1.43.0) rather than a pin, because Home Assistant ships its
+# own copy; the suite runs on that minimum, the oldest version an install can
+# have. Raise both together.
 influxdb-client==1.43.0
 
 # Optional at runtime (Home Assistant ships both), required to exercise the
