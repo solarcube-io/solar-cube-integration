@@ -1,6 +1,6 @@
 [project]
 name = "solar-cube-integration"
-version = "0.2.0"
+version = "0.2.2"
 description = "Home Assistant integration for Solar Cube HEMS"
 requires-python = ">=3.13"
 
@@ -51,3 +51,6 @@ forced-separate = ["homeassistant"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-q"
+markers = [
+    "allow_frontend_installer: let the test reach _async_run_frontend_installer, which shells out to a downloader",
+]

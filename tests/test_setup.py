@@ -12,6 +12,7 @@ from custom_components.solar_cube.const import (
     CONF_DATA_BUCKET,
     CONF_IMPORT_DASHBOARDS,
     CONF_ORG,
+    CONF_RUN_FRONTEND_INSTALLER,
     CONF_S1_LCD_DISPLAY,
     DATA_ENTRIES,
     DOMAIN,
@@ -32,6 +33,9 @@ ENTRY_DATA = {
     CONF_IMPORT_DASHBOARDS: False,
     CONF_CONFIGURE_ENERGY_DASHBOARD: False,
     CONF_S1_LCD_DISPLAY: False,
+    # Left at its default (True) this ran the real installer, which downloads
+    # third-party JavaScript; the autouse guard in conftest now also blocks it.
+    CONF_RUN_FRONTEND_INSTALLER: False,
 }
 
 
@@ -266,3 +270,69 @@ class TestLcdCurrency:
         sensor = hass.states.get("sensor.solar_cube_optimised_energy_total_savings")
         assert sensor.attributes["unit_of_measurement"] == "EUR"
         assert currency_label(hass.config.currency, "en") == "EUR"
+
+
+class TestFrontendInstallerNeverRunsUnderTest:
+    """The installer shells out to a script that downloads third-party
+    JavaScript. The option defaults to True, because Solar Cube ships as an
+    appliance whose users cannot install Lovelace cards themselves, so any
+    fixture setting up an entry without disabling it ran the real thing --
+    pytest_socket cannot intervene, since the traffic belongs to a subprocess
+    rather than to this interpreter, and the spawned process left an asyncio
+    waitpid thread that surfaced as an intermittent teardown error.
+    """
+
+    async def test_setting_up_an_entry_spawns_no_process(self, hass) -> None:
+        import asyncio
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            unique_id=DOMAIN,
+            title="Solar Cube",
+            data={**ENTRY_DATA, CONF_RUN_FRONTEND_INSTALLER: True},
+        )
+        entry.add_to_hass(hass)
+
+        with (
+            patch(
+                "custom_components.solar_cube.SolarCubeApi", autospec=True
+            ) as api_cls,
+            patch.object(asyncio, "create_subprocess_exec") as spawn,
+        ):
+            api = api_cls.return_value
+            api.async_validate = AsyncMock(return_value=None)
+            api.async_query_last_batch = AsyncMock(return_value={})
+            api.async_get_forecast = AsyncMock(return_value={})
+            api.async_get_optimal_actions = AsyncMock(return_value={})
+            await hass.config_entries.async_setup(entry.entry_id)
+            await hass.async_block_till_done()
+
+        assert spawn.call_count == 0, (
+            "entry setup spawned a subprocess; the frontend installer guard in "
+            "conftest is not covering this path"
+        )
+
+    @pytest.mark.allow_frontend_installer
+    async def test_the_guard_is_what_stops_it(self, hass) -> None:
+        """Opting out reaches the real function, which does spawn. Shows the
+        guard is load-bearing rather than decorative; the spawn is intercepted
+        so nothing is fetched."""
+        import asyncio
+
+        from custom_components.solar_cube import _async_run_frontend_installer
+
+        class FakeProc:
+            returncode = 0
+
+            async def communicate(self):
+                return b"", b""
+
+        with patch.object(
+            asyncio, "create_subprocess_exec", return_value=FakeProc()
+        ) as spawn:
+            await _async_run_frontend_installer(hass)
+
+        assert spawn.call_count == 1
+        assert "install_frontend_deps.sh" in " ".join(
+            str(a) for a in spawn.call_args[0]
+        )
