@@ -1,6 +1,6 @@
 [project]
 name = "solar-cube-integration"
-version = "0.2.2"
+version = "0.2.3"
 description = "Home Assistant integration for Solar Cube HEMS"
 requires-python = ">=3.13"
 

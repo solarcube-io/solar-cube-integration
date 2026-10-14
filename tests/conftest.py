@@ -12,6 +12,14 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+# Bind ``custom_components`` to this repository before any fixture runs.
+# Otherwise the ``hass`` fixture imports the test plugin's own
+# testing_config/custom_components first, and patching
+# ``custom_components.solar_cube`` (see no_frontend_installer) fails in every
+# test of a module that does not import the integration itself:
+# tests/test_packaging.py, run on its own.
+import custom_components.solar_cube  # noqa: E402, F401
+
 
 def _install_usb1_stub() -> None:
     """Provide a minimal ``usb1`` stub so the bridge is importable without libusb.

@@ -70,6 +70,25 @@ def test_the_manifest_and_readme_agree_on_the_minimum() -> None:
     )
 
 
+def test_influxdb_client_is_a_minimum_and_the_suite_runs_on_it() -> None:
+    """Home Assistant ships influxdb-client itself, and a custom integration
+    shares its environment, so an exact pin conflicts as soon as Home Assistant
+    moves to another release; hassfest rejects one outright. The manifest names a
+    minimum instead, and the suite pins that same minimum: installs that already
+    have it keep it, so it is the oldest version that can run in the field."""
+    manifest = json.loads((COMPONENT / "manifest.json").read_text(encoding="utf-8"))
+    (requirement,) = (
+        r for r in manifest["requirements"] if r.startswith("influxdb-client")
+    )
+    match = re.fullmatch(r"influxdb-client>=(\S+)", requirement)
+    assert match, f"{requirement}: name a minimum version, not a pin"
+    assert re.search(
+        rf"^influxdb-client=={re.escape(match.group(1))}$",
+        (ROOT / "requirements-test.txt").read_text(encoding="utf-8"),
+        re.M,
+    ), f"requirements-test.txt must pin influxdb-client to {match.group(1)}"
+
+
 def test_the_manifest_version_is_a_release_number() -> None:
     """Home Assistant keys its translation cache for custom integrations on this
     value, so a release that changes translations without bumping it renders raw
