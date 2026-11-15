@@ -15,9 +15,11 @@ from .const import (
     OPTIMAL_ACTIONS_UPDATE_INTERVAL,
     UPDATE_INTERVAL,
 )
+from .counter_guard import CounterGuard
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -27,6 +29,15 @@ from homeassistant.util import dt as dt_util
 _LOGGER = logging.getLogger(__name__)
 
 LAST_UPDATE_KEY = "_last_update"
+
+# The state of the counter guard (see counter_guard.py), per config entry
+COUNTER_GUARD_STORAGE_VERSION = 1
+COUNTER_GUARD_SAVE_DELAY = 300  # s
+
+
+def counter_guard_storage_key(entry_id: str) -> str:
+    """Return the storage key of the counter guard of a config entry."""
+    return f"{DOMAIN}.counter_guard.{entry_id}"
 
 # Grouping key for batched queries: one InfluxDB round-trip per distinct group.
 _QueryGroup = tuple[str, str, str]  # (bucket, measurement, range_start)
@@ -77,9 +88,33 @@ class SolarCubeDataCoordinator(_SolarCubeCoordinator):
         api: SolarCubeApi,
         entry_data: dict[str, Any],
         sensor_definitions: list[dict[str, Any]],
+        entry_id: str | None = None,
     ) -> None:
         self.sensor_definitions = sensor_definitions
         super().__init__(hass, api, entry_data, "data", UPDATE_INTERVAL)
+        # Every lifetime counter (state_class total_increasing) is published
+        # without its falls; the kWh totals and the period meters read the same
+        # values. Without an entry id the state is not saved.
+        self.counter_guard = CounterGuard(
+            (
+                definition["key"]
+                for definition in sensor_definitions
+                if definition.get("state_class") == "total_increasing"
+            ),
+            on_change=self._schedule_counter_guard_save,
+        )
+        self._counter_guard_store: Store | None = (
+            Store(hass, COUNTER_GUARD_STORAGE_VERSION, counter_guard_storage_key(entry_id))
+            if entry_id
+            else None
+        )
+        self._counter_guard_loaded = self._counter_guard_store is None
+
+    def _schedule_counter_guard_save(self) -> None:
+        if self._counter_guard_store is not None:
+            self._counter_guard_store.async_delay_save(
+                self.counter_guard.as_dict, COUNTER_GUARD_SAVE_DELAY
+            )
 
     def _bucket_for(self, definition: dict[str, Any]) -> str:
         """Resolve a definition's logical source to the configured bucket name.
@@ -127,6 +162,9 @@ class SolarCubeDataCoordinator(_SolarCubeCoordinator):
         return groups
 
     async def _async_fetch(self) -> dict[str, Any]:
+        if not self._counter_guard_loaded and self._counter_guard_store is not None:
+            self.counter_guard.load(await self._counter_guard_store.async_load())
+            self._counter_guard_loaded = True
         groups = self._query_groups()
         fallback_groups = self._fallback_groups()
 
@@ -158,6 +196,7 @@ class SolarCubeDataCoordinator(_SolarCubeCoordinator):
         values: dict[str, Any] = {}
         for chunk in results:
             values.update(chunk)
+        self.counter_guard.apply(values)
         values[LAST_UPDATE_KEY] = dt_util.utcnow().isoformat()
         return values
 

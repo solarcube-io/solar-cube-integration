@@ -50,9 +50,11 @@ from .const import (
     normalize_language,
 )
 from .coordinator import (
+    COUNTER_GUARD_STORAGE_VERSION,
     SolarCubeDataCoordinator,
     SolarCubeForecastCoordinator,
     SolarCubeOptimalActionsCoordinator,
+    counter_guard_storage_key,
 )
 from .sensor_definitions import SENSOR_DEFINITIONS
 from .solar_lcd import SolarCubeLCDController
@@ -70,6 +72,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util.yaml import Secrets, load_yaml_dict
 
@@ -190,7 +193,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         org=config[CONF_ORG],
     )
 
-    data_coordinator = SolarCubeDataCoordinator(hass, api, config, SENSOR_DEFINITIONS)
+    data_coordinator = SolarCubeDataCoordinator(
+        hass, api, config, SENSOR_DEFINITIONS, entry_id=entry.entry_id
+    )
     forecast_coordinator = SolarCubeForecastCoordinator(hass, api, config)
     optimal_coordinator = SolarCubeOptimalActionsCoordinator(hass, api, config)
 
@@ -626,6 +631,14 @@ async def _async_configure_energy_dashboard(hass: HomeAssistant) -> bool:
     if changed:
         LOGGER.info("Configured Home Assistant Energy dashboard (%s)", storage_path)
     return changed
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove the counter guard's saved state together with the entry."""
+
+    await Store(
+        hass, COUNTER_GUARD_STORAGE_VERSION, counter_guard_storage_key(entry.entry_id)
+    ).async_remove()
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
